@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gubikos 7</title>
+
+    <!-- ============================================================================== -->
+    <!-- BÖLÜM: CSS STİLLERİ                                                          -->
+    <!-- ============================================================================== -->
+    <style>
+        /* Genel Ayarlar */
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Press+Start+2P&display=swap');
+        :root {
+            --background-url: url('https://images.unsplash.com/photo-1528722828814-77b9b83aafb2?q=80&w=2070&auto=format&fit=crop');
+        }
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; font-family: 'Roboto', sans-serif; user-select: none;
+        }
+        .hidden { display: none !important; }
+
+        /* Başlangıç Ekranı */
+        #boot-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #000; color: #0f0; font-family: 'Courier New', monospace;
+            padding: 20px; font-size: 16px; white-space: pre-wrap; z-index: 10000;
+        }
+        #boot-screen .cursor { display: inline-block; background-color: #0f0; width: 10px; height: 18px; animation: blink 1s step-end infinite; }
+        @keyframes blink { from, to { background-color: transparent } 50% { background-color: #0f0; } }
+
+        /* Masaüstü */
+        #gubikos-desktop { width: 100%; height: 100%; background: var(--background-url) no-repeat center center; background-size: cover; position: relative; }
+        #desktop-icons { padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .desktop-icon { width: 80px; text-align: center; padding: 10px; cursor: pointer; border-radius: 5px; }
+        .desktop-icon:hover { background-color: rgba(255, 255, 255, 0.2); }
+        .desktop-icon .icon-fs { font-size: 50px; line-height: 50px; }
+        .desktop-icon span { display: block; color: white; text-shadow: 1px 1px 2px black; margin-top: 5px; font-size: 14px; }
+
+        /* Görev Çubuğu */
+        #taskbar {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 40px;
+            background-color: rgba(30, 30, 30, 0.8); backdrop-filter: blur(10px);
+            display: flex; align-items: center; color: white; z-index: 5000;
+        }
+        #start-button { padding: 0 15px; font-weight: bold; cursor: pointer; height: 100%; display: flex; align-items: center; }
+        #start-button:hover { background-color: rgba(0, 150, 255, 0.5); }
+        #clock { padding: 0 15px; font-size: 14px; }
+
+        /* Pencereler */
+        #window-area { position: absolute; top: 0; left: 0; width: 100%; height: calc(100% - 40px); pointer-events: none; }
+        .window {
+            min-width: 350px; min-height: 250px; background-color: rgba(240, 240, 240, 0.9);
+            backdrop-filter: blur(5px); border: 1px solid #666; border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3); display: flex; flex-direction: column;
+            position: absolute; pointer-events: all;
+        }
+        .window.glitching { animation: glitch 0.5s infinite; }
+        @keyframes glitch { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(-2px, 2px); } 50% { transform: translate(2px, -2px); } 75% { transform: translate(-2px, -2px); } }
+        .window .title-bar {
+            width: 100%; height: 30px; background-color: #333; color: white; display: flex;
+            align-items: center; justify-content: space-between; cursor: move;
+            border-top-left-radius: 7px; border-top-right-radius: 7px;
+        }
+        .title-bar .title { padding-left: 10px; font-weight: bold; }
+        .title-bar .window-controls button { width: 30px; height: 30px; border: none; background: none; color: white; font-size: 16px; cursor: pointer; }
+        .title-bar .window-controls button:hover { background-color: #555; }
+        .title-bar .window-controls .close-btn:hover { background-color: #e81123; }
+        .window .window-content { flex-grow: 1; padding: 10px; overflow: auto; display: flex; flex-direction: column; }
+
+        /* Bildirimler */
+        #notification-area { position: fixed; bottom: 50px; right: 20px; z-index: 9999; }
+        .notification {
+            background-color: #2c3e50; color: white; padding: 15px; border-radius: 5px;
+            margin-top: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            opacity: 0; transform: translateX(100%); animation: slideIn 0.5s forwards;
+        }
+        .notification.error { background-color: #e74c3c; }
+        .notification.success { background-color: #2ecc71; }
+        @keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
+
+        /* UYGULAMA ÖZEL STİLLERİ */
+        /* Terminal */
+        #terminal-logo { font-family: 'Courier New', monospace; color: #39FF14; white-space: pre; margin-bottom: 10px; }
+        #terminal-content { background-color: #1e1e1e; color: #ccc; font-family: 'Courier New', monospace; flex-grow: 1; display: flex; flex-direction: column; }
+        #terminal-output { flex-grow: 1; overflow-y: auto; white-space: pre-wrap; padding: 5px; }
+        #terminal-input-line { display: flex; } #terminal-prompt { color: #0f0; }
+        #terminal-input { background: none; border: none; color: #ccc; flex-grow: 1; outline: none; font-family: inherit; }
+
+        /* GubiGo Arama Motoru */
+        #gubigo-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
+        #gubigo-logo { font-family: 'Press Start 2P', cursive; font-size: 48px; margin-bottom: 20px; }
+        #gubigo-logo .g { color: #4285F4; } #gubigo-logo .u1 { color: #DB4437; } #gubigo-logo .b { color: #F4B400; }
+        #gubigo-logo .i { color: #4285F4; } #gubigo-logo .g2 { color: #0F9D58; } #gubigo-logo .o { color: #DB4437; }
+        #gubigo-search-bar { width: 80%; max-width: 500px; padding: 10px; border: 1px solid #ccc; border-radius: 20px; font-size: 16px; }
+        #gubigo-search-btn { margin-top: 20px; padding: 10px 20px; border: none; background-color: #f2f2f2; cursor: pointer; }
+
+        /* Mağaza ve Oyun Marketi */
+        .store-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        .store-item {
+            border: 1px solid #ccc; border-radius: 5px; padding: 10px; text-align: center;
+            display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .store-item h4 { margin: 0 0 5px 0; }
+        .store-item p { margin: 5px 0; font-size: 12px; color: #555; flex-grow: 1; }
+        .store-item .price { font-weight: bold; color: #0F9D58; margin-bottom: 10px; }
+        .store-item button {
+            background-color: #4285F4; color: white; border: none; padding: 8px;
+            cursor: pointer; border-radius: 3px;
+        }
+        .store-item button:hover { background-color: #357ae8; }
+        .store-item button:disabled { background-color: #aaa; cursor: not-allowed; }
+        .store-item .owned { color: #2ecc71; font-weight: bold; }
+        
+        /* Banka ve Ayarlar */
+        .info-panel h3 { border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+        .info-panel p { font-size: 18px; }
+        #bank-balance { color: #27ae60; font-weight: bold; font-family: 'Courier New', monospace; }
+        #hardware-list li { list-style: none; margin-bottom: 10px; }
+
+        /* Oyun Penceresi */
+        #clicker-game-area { position: relative; width: 100%; height: 100%; background: #eee; }
+        #clicker-target {
+            position: absolute; width: 50px; height: 50px; background: #e74c3c;
+            border-radius: 50%; cursor: pointer; transition: all 0.1s;
+        }
+    </style>
+</head>
+<body>
+    <!-- ============================================================================== -->
+    <!-- BÖLÜM: HTML YAPISI                                                            -->
+    <!-- ============================================================================== -->
+    <div id="boot-screen">
+        <pre id="boot-log">Gubikos 7 Önyükleyici v7.0 başlatılıyor...</pre>
+        <div class="cursor">_</div>
+    </div>
+    <div id="gubikos-desktop" class="hidden">
+        <div id="desktop-icons">
+            <div class="desktop-icon" id="icon-terminal"> <div class="icon-fs">💻</div> <span>GubiTerminal</span></div>
+            <div class="desktop-icon" id="icon-gubigo"> <div class="icon-fs">🌐</div> <span>GubiGo</span></div>
+            <div class="desktop-icon" id="icon-settings"> <div class="icon-fs">⚙️</div> <span>Ayarlar</span></div>
+            <div class="desktop-icon" id="icon-store"> <div class="icon-fs">📦</div> <span>GubiStore</span></div>
+            <div class="desktop-icon" id="icon-playgaming"> <div class="icon-fs">🎮</div> <span>PlayGaming</span></div>
+            <div class="desktop-icon" id="icon-bank"> <div class="icon-fs">🏦</div> <span>Banka</span></div>
+        </div>
+        <div id="window-area"></div>
+        <div id="taskbar">
+            <div id="start-button">💎 Gubi</div>
+            <div id="running-apps"></div>
+            <div id="clock">12:00:00</div>
+        </div>
+        <div id="notification-area"></div>
+    </div>
+
+    <!-- ============================================================================== -->
+    <!-- BÖLÜM: JAVASCRIPT İŞLEVSELLİĞİ                                                -->
+    <!-- ============================================================================== -->
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- OYUN DURUMU VE VERİ YÖNETİMİ ---
+        let gameState = {
+            money: 50,
+            hardware: { cpu: 1, ram: 1, gpu: 1 },
+            ownedGames: [],
+            os: "Gubikos 7"
+        };
+        const loadGameState = () => {
+            const savedState = localStorage.getItem('gubikosGameState');
+            if (savedState) gameState = JSON.parse(savedState);
+        };
+        const saveGameState = () => {
+            localStorage.setItem('gubikosGameState', JSON.stringify(gameState));
+        };
+
+        // --- GLOBAL DOM ELEMENTLERİ ---
+        const bootScreen = document.getElementById('boot-screen');
+        const bootLog = document.getElementById('boot-log');
+        const gubikosDesktop = document.getElementById('gubikos-desktop');
+        const clockElement = document.getElementById('clock');
+        const windowArea = document.getElementById('window-area');
+        const notificationArea = document.getElementById('notification-area');
+        let highestZIndex = 100;
+        const openWindows = {};
+
+        // --- VERİ TABANLARI (Mağaza, Oyunlar) ---
+        const hardwareCatalog = [
+            { id: 'cpu2', name: 'GubiCore Duo', price: 100, type: 'cpu', level: 2, desc: 'Çift çekirdek gücü. Biraz daha hızlı.' },
+            { id: 'ram2', name: '256KB Hızlı RAM', price: 80, type: 'ram', level: 2, desc: 'Daha fazla uygulama, daha az takılma.' },
+            { id: 'gpu2', name: 'GubiVoodoo 2D', price: 150, type: 'gpu', level: 2, desc: 'Oyunlarda kasmayı azaltır.' },
+            { id: 'cpu3', name: 'GubiCore i3', price: 500, type: 'cpu', level: 3, desc: 'Modern işlemler için yeterli.' },
+            { id: 'ram3', name: '512KB Süper RAM', price: 400, type: 'ram', level: 3, desc: 'Akıcı bir deneyim sunar.' },
+            { id: 'gpu3', name: 'GubiCrystal 3D', price: 750, type: 'gpu', level: 3, desc: '3D oyunlar için giriş seviyesi.' },
+        ];
+        const osCatalog = [
+            { id: 'os8', name: 'Gubikos 8', price: 5000, desc: 'Çok Yakında...' },
+            { id: 'os9', name: 'Gubikos 9', price: 10000, desc: 'Çok Yakında...' },
+            { id: 'os10', name: 'Gubikos 10', price: 25000, desc: 'Çok Yakında...' },
+            { id: 'os10p', name: 'Gubikos 10 Pro', price: 50000, desc: 'Çok Yakında...' },
+            { id: 'os11', name: 'Gubikos 11', price: 99999, desc: 'Çok Yakında...' },
+        ];
+        const gameCatalog = [
+            { id: 'clicker', name: 'Nokta Avcısı', price: 0, desc: 'Ekranda çılgınca kaçan kırmızı noktayı yakala!' },
+            { id: 'guess', name: 'Sayı Tahmin', price: 0, desc: 'Aklımdaki sayıyı 10 denemede bulabilir misin?' },
+            { id: 'typer', name: 'Hızlı Parmaklar', price: 150, desc: 'Ekranda beliren kelimeleri ne kadar hızlı yazabilirsin?' },
+        ];
+        
+        // --- PERFORMANS VE HATA SİMÜLASYONU ---
+        const calculatePerformanceDelay = () => Math.max(100, 1500 - (gameState.hardware.ram * 300));
+        const checkGpuLag = () => Math.random() > (gameState.hardware.gpu * 0.25);
+
+        // --- BAŞLANGIÇ VE MASAÜSTÜ YÖNETİMİ ---
+        const startBootSequence = () => {
+            const bootMessages = [
+                "GubiÇekirdek v7.0 'Kristal' yükleniyor...",
+                `Donanım kontrolü... (RAM: ${gameState.hardware.ram * 128}KB)`,
+                "[OK] CPU, GPU, GubiFS",
+                "Kristal Arayüz (Crystal UI) başlatılıyor...",
+            ];
+            let i = 0;
+            const interval = setInterval(() => {
+                if (i < bootMessages.length) {
+                    bootLog.textContent += `\n${bootMessages[i]}`;
+                    i++;
+                } else {
+                    clearInterval(interval);
+                    setTimeout(startDesktop, calculatePerformanceDelay());
+                }
+            }, 300);
+        };
+        const startDesktop = () => {
+            bootScreen.classList.add('hidden');
+            gubikosDesktop.classList.remove('hidden');
+            setInterval(updateClock, 1000);
+            setupDesktopIcons();
+        };
+        const updateClock = () => clockElement.textContent = new Date().toLocaleTimeString('tr-TR');
+        const setupDesktopIcons = () => {
+            document.getElementById('icon-terminal').addEventListener('dblclick', openTerminal);
+            document.getElementById('icon-gubigo').addEventListener('dblclick', openGubiGo);
+            document.getElementById('icon-settings').addEventListener('dblclick', openSettings);
+            document.getElementById('icon-store').addEventListener('dblclick', openStore);
+            document.getElementById('icon-playgaming').addEventListener('dblclick', openPlayGaming);
+            document.getElementById('icon-bank').addEventListener('dblclick', openBank);
+        };
+
+        // --- GENEL AMAÇLI FONKSİYONLAR ---
+        const showNotification = (message, type = 'info') => {
+            const notif = document.createElement('div');
+            notif.className = `notification ${type}`;
+            notif.textContent = message;
+            notificationArea.appendChild(notif);
+            setTimeout(() => notif.remove(), 4000);
+        };
+
+        // --- PENCERE YÖNETİMİ ---
+        const createWindow = (id, title, contentHTML, options = {}) => {
+            if (document.getElementById(id)) { focusWindow(id); return; }
+            showNotification(`${title} açılıyor...`, 'info');
+            setTimeout(() => {
+                const win = document.createElement('div');
+                win.className = 'window';
+                win.id = id;
+                win.style.width = options.width || '500px';
+                win.style.height = options.height || '400px';
+                win.style.top = `${50 + Object.keys(openWindows).length * 20}px`;
+                win.style.left = `${100 + Object.keys(openWindows).length * 20}px`;
+                win.style.zIndex = ++highestZIndex;
+                win.innerHTML = `
+                    <div class="title-bar"><span class="title">${title}</span><div class="window-controls"><button class="close-btn">×</button></div></div>
+                    <div class="window-content">${contentHTML}</div>`;
+                windowArea.appendChild(win); openWindows[id] = win;
+                makeDraggable(win.querySelector('.title-bar'), win);
+                win.querySelector('.close-btn').addEventListener('click', () => closeWindow(id));
+                win.addEventListener('mousedown', () => focusWindow(id));
+                if (options.onOpen) options.onOpen(win);
+            }, calculatePerformanceDelay());
+        };
+        const closeWindow = (id) => { if (openWindows[id]) { openWindows[id].remove(); delete openWindows[id]; } };
+        const focusWindow = (id) => { if (openWindows[id]) openWindows[id].style.zIndex = ++highestZIndex; };
+        const makeDraggable = (titleBar, win) => {
+            let offsetX, offsetY;
+            const onMouseDown = (e) => {
+                offsetX = e.clientX - win.offsetLeft; offsetY = e.clientY - win.offsetTop;
+                document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp);
+            };
+            const onMouseMove = (e) => { win.style.left = `${e.clientX - offsetX}px`; win.style.top = `${e.clientY - offsetY}px`; };
+            const onMouseUp = () => { document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); };
+            titleBar.addEventListener('mousedown', onMouseDown);
+        };
+
+        // --- UYGULAMA AÇMA FONKSİYONLARI ---
+        const openTerminal = () => {
+            const logo = `
+   ______      __        __  _              
+  / ____/___  / /_      / /_(_)___  ___     
+ / / __/ __ \\/ __ \\    / __/ / __ \\/ _ \\    
+/ /_/ / /_/ / / / /   / /_/ / / / /  __/    
+\\____/\\____/_/ /_/____\\__/_/_/ /_/\\___/     
+               /_____/                     
+`;
+            const content = `<div id="terminal-content"><pre id="terminal-logo">${logo}</pre><div id="terminal-output">Gubikos 7 [Versiyon 7.0] - Yardım için 'yardim' yaz.</div><div id="terminal-input-line"><span id="terminal-prompt">Gubikos></span><input type="text" id="terminal-input" autofocus></div></div>`;
+            createWindow('win-terminal', 'GubiTerminal', content, {
+                onOpen: (win) => {
+                    const terminalInput = win.querySelector('#terminal-input');
+                    terminalInput.focus();
+                    terminalInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleTerminalCommand(win, terminalInput.value); terminalInput.value = ''; });
+                }
+            });
+        };
+        const openGubiGo = () => {
+            const content = `<div id="gubigo-container">
+                <div id="gubigo-logo"><span class="g">G</span><span class="u1">u</span><span class="b">b</span><span class="i">i</span><span class="g2">G</span><span class="o">o</span></div>
+                <input id="gubigo-search-bar" type="text" placeholder="GubiGo ile arayın...">
+                <button id="gubigo-search-btn">Ara</button>
+            </div>`;
+            createWindow('win-gubigo', 'GubiGo', content, {
+                onOpen: (win) => {
+                    win.querySelector('#gubigo-search-btn').addEventListener('click', () => {
+                        const query = win.querySelector('#gubigo-search-bar').value;
+                        if (query) window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+                    });
+                }
+            });
+        };
+        const openBank = () => {
+            const content = `<div class="info-panel"><h3>Banka Hesabı</h3><p>Mevcut Bakiye:</p><h2 id="bank-balance">G$ ${gameState.money.toFixed(2)}</h2></div>`;
+            createWindow('win-bank', 'Banka', content);
+        };
+        const openSettings = () => {
+            const content = `<div class="info-panel">
+                <h3>Sistem Donanımı</h3>
+                <ul id="hardware-list">
+                    <li>CPU: Seviye ${gameState.hardware.cpu}</li>
+                    <li>RAM: Seviye ${gameState.hardware.ram} (${gameState.hardware.ram*128}KB)</li>
+                    <li>GPU: Seviye ${gameState.hardware.gpu}</li>
+                    <li>İS: ${gameState.os}</li>
+                </ul>
+            </div>`;
+            createWindow('win-settings', 'Ayarlar', content);
+        };
+        const openStore = () => {
+            let itemsHTML = hardwareCatalog.map(item => `
+                <div class="store-item">
+                    <h4>${item.name}</h4><p>${item.desc}</p><p class="price">G$ ${item.price}</p>
+                    ${gameState.hardware[item.type] >= item.level ? '<span class="owned">SAHİP OLUNAN</span>' : `<button data-item-id="${item.id}" ${gameState.money < item.price ? 'disabled' : ''}>Satın Al</button>`}
+                </div>`).join('');
+            let osHTML = osCatalog.map(item => `<div class="store-item"><h4>${item.name}</h4><p>${item.desc}</p><p class="price">G$ ${item.price}</p><button disabled>Çok Yakında</button></div>`).join('');
+            const content = `<h3>Donanım Parçaları</h3><div class="store-grid">${itemsHTML}</div><h3 style="margin-top:20px;">İşletim Sistemleri</h3><div class="store-grid">${osHTML}</div>`;
+            createWindow('win-store', 'GubiStore', content, {
+                width: '700px', height: '500px',
+                onOpen: (win) => {
+                    win.querySelectorAll('button[data-item-id]').forEach(btn => btn.addEventListener('click', (e) => buyHardware(e.target.dataset.itemId)));
+                }
+            });
+        };
+        const openPlayGaming = () => {
+            let gamesHTML = gameCatalog.map(game => `
+                <div class="store-item">
+                    <h4>${game.name}</h4><p>${game.desc}</p>
+                    ${game.price > 0 ? `<p class="price">G$ ${game.price}</p>`: '<p class="price">ÜCRETSİZ</p>'}
+                    ${gameState.ownedGames.includes(game.id) || game.price === 0 ? `<button data-game-id="${game.id}">Oyna</button>` : `<button data-buy-game-id="${game.id}" ${gameState.money < game.price ? 'disabled' : ''}>Satın Al</button>`}
+                </div>`).join('');
+            const content = `<h3>Oyun Kütüphanesi</h3><div class="store-grid">${gamesHTML}</div>`;
+            createWindow('win-playgaming', 'PlayGaming', content, {
+                width: '700px', height: '500px',
+                onOpen: (win) => {
+                    win.querySelectorAll('button[data-game-id]').forEach(btn => btn.addEventListener('click', (e) => playGame(e.target.dataset.gameId)));
+                    win.querySelectorAll('button[data-buy-game-id]').forEach(btn => btn.addEventListener('click', (e) => buyGame(e.target.dataset.buyGameId)));
+                }
+            });
+        };
+
+        // --- SATIN ALMA VE OYUN MANTIKLARI ---
+        const buyHardware = (itemId) => {
+            const item = hardwareCatalog.find(i => i.id === itemId);
+            if (item && gameState.money >= item.price && gameState.hardware[item.type] < item.level) {
+                gameState.money -= item.price;
+                gameState.hardware[item.type] = item.level;
+                saveGameState();
+                showNotification(`${item.name} başarıyla satın alındı ve takıldı!`, 'success');
+                closeWindow('win-store'); openStore(); // Refresh store & settings
+                if(document.getElementById('win-settings')) { closeWindow('win-settings'); openSettings(); }
+            } else { showNotification('Yetersiz bakiye veya zaten daha iyi bir parçaya sahipsin.', 'error'); }
+        };
+        const buyGame = (gameId) => {
+            const game = gameCatalog.find(g => g.id === gameId);
+            if (game && gameState.money >= game.price && !gameState.ownedGames.includes(gameId)) {
+                gameState.money -= game.price;
+                gameState.ownedGames.push(gameId);
+                saveGameState();
+                showNotification(`${game.name} satın alındı!`, 'success');
+                closeWindow('win-playgaming'); openPlayGaming();
+            } else { showNotification('Yetersiz bakiye!', 'error'); }
+        };
+        const playGame = (gameId) => {
+            if (gameId === 'clicker') openClickerGame();
+            if (gameId === 'guess') openGuessGame();
+        };
+
+        // --- OYUNLAR ---
+        function openClickerGame() {
+            let score = 0;
+            const content = `<div class="info-panel"><h4>Skor: <span id="clicker-score">0</span></h4></div><div id="clicker-game-area"><div id="clicker-target"></div></div>`;
+            createWindow('win-clicker', 'Nokta Avcısı', content, {
+                onOpen: (win) => {
+                    const target = win.querySelector('#clicker-target');
+                    const area = win.querySelector('#clicker-game-area');
+                    const scoreEl = win.querySelector('#clicker-score');
+                    if (checkGpuLag()) win.classList.add('glitching');
+                    const moveTarget = () => {
+                        target.style.top = `${Math.random() * (area.clientHeight - 50)}px`;
+                        target.style.left = `${Math.random() * (area.clientWidth - 50)}px`;
+                    };
+                    target.addEventListener('click', () => {
+                        score++;
+                        scoreEl.textContent = score;
+                        if (score % 10 === 0) {
+                            const reward = 5 + (gameState.hardware.cpu * 2);
+                            gameState.money += reward;
+                            saveGameState();
+                            showNotification(`10 isabet! G$ ${reward.toFixed(2)} kazandın!`, 'success');
+                        }
+                        moveTarget();
+                    });
+                    moveTarget();
+                }
+            });
+        }
+        function openGuessGame() {
+            let numberToGuess = Math.floor(Math.random() * 100) + 1;
+            let guesses = 10;
+            const content = `<div class="info-panel">
+                <h3>Sayıyı Tahmin Et (1-100)</h3>
+                <p>Kalan Hakkın: <span id="guess-tries">${guesses}</span></p>
+                <input type="number" id="guess-input" style="width: 95%; padding: 5px;">
+                <button id="guess-button" style="width: 100%; margin-top: 10px; padding: 5px;">Tahmin Et</button>
+                <p id="guess-feedback"></p>
+            </div>`;
+            createWindow('win-guess', 'Sayı Tahmin', content, {
+                onOpen: (win) => {
+                    const input = win.querySelector('#guess-input');
+                    const button = win.querySelector('#guess-button');
+                    const feedback = win.querySelector('#guess-feedback');
+                    const triesEl = win.querySelector('#guess-tries');
+                    button.addEventListener('click', () => {
+                        const guess = parseInt(input.value);
+                        if (isNaN(guess)) return;
+                        guesses--;
+                        triesEl.textContent = guesses;
+                        if (guess === numberToGuess) {
+                            const reward = 25 * gameState.hardware.cpu;
+                            feedback.textContent = `Tebrikler! Doğru tahmin! G$ ${reward.toFixed(2)} kazandın!`;
+                            gameState.money += reward;
+                            saveGameState();
+                            button.disabled = true;
+                        } else if (guesses <= 0) {
+                            feedback.textContent = `Kaybettin! Doğru sayı ${numberToGuess} idi.`;
+                            button.disabled = true;
+                        } else {
+                            feedback.textContent = guess > numberToGuess ? 'Daha küçük bir sayı dene.' : 'Daha büyük bir sayı dene.';
+                        }
+                    });
+                }
+            });
+        }
+
+        // --- Terminal Komutları ---
+        const handleTerminalCommand = (win, command) => {
+            const output = win.querySelector('#terminal-output');
+            output.innerHTML += `\n<span style="color:#0f0;">Gubikos></span> ${command}`;
+            const [cmd, ...args] = command.toLowerCase().split(' ');
+            let response = '';
+            switch(cmd) {
+                case 'yardim': response = "\nKullanılabilir komutlar: yardim, tarih, temizle, sistem, banka"; break;
+                case 'tarih': response = `\n${new Date().toLocaleString('tr-TR')}`; break;
+                case 'temizle': output.innerHTML = "Gubikos 7 Terminal"; return;
+                case 'sistem': response = `\nCPU: Seviye ${gameState.hardware.cpu}\nRAM: Seviye ${gameState.hardware.ram}\nGPU: Seviye ${gameState.hardware.gpu}`; break;
+                case 'banka': response = `\nBakiye: G$ ${gameState.money.toFixed(2)}`; break;
+                default: if (command.trim()!=='') response = `\nHATA: '${command}' komutu tanınmıyor.`; break;
+            }
+            output.innerHTML += response; output.scrollTop = output.scrollHeight;
+        };
+
+        // --- BAŞLATMA ---
+        loadGameState();
+        startBootSequence();
+    });
+    </script>
+
+</body>
+</html>
